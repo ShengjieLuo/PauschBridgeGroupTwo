@@ -9,11 +9,12 @@ import json
 import time
 import thread
 import requests
+import lumiversepython as L
 
 #User-defined Constant
 PORT_NUMBER = 3456
 URL = "http://127.0.0.1:3456/"
-SMALL_INTERVAL = 0.05
+SMALL_INTERVAL = 0.1
 LARGE_INTERVAL = 1
 WALK    = 1
 RUN     = 2
@@ -22,6 +23,44 @@ LEAVE   = 4
 STOP    = 5
 GHC     = 0
 PURNELL = 1
+
+#Intialize the light
+rig = L.Rig("/home/teacher/Lumiverse/PBridge.rig.json")
+rig.init()
+
+#Set the colour
+GHC_COLOUR = (0,0,0)
+PURNELL_COLOR = (0,0,0)
+
+'''
+Light
+Interactive with light
+'''
+class Light:
+
+    #Light the bridge
+    def light(self,users):
+        for userkey in users:
+            user = users[userkey]
+            if user.direct==GHC:
+                panel = "$panel="+str(user.loc)
+                rig.select(panel).setRGBRaw(1,0,0)
+                panel = "$panel="+str(user.loc-1)
+                rig.select(panel).setRGBRaw(0,0,0)
+                if user.status==RUN:
+                    panel = "$panel="+str(user.loc-1)
+                    panel = "$panel="+str(user.loc-2)
+                    rig.select(panel).setRGBRaw(1,0,0)
+            elif user.direct ==PURNELL:
+                panel = "$panel="+str(user.loc)
+                rig.select(panel).setRGBRaw(0,1,0)
+                panel = "$panel="+str(user.loc+1)
+                rig.select(panel).setRGBRaw(0,0,0)
+                if user.status==RUN:
+                    panel = "$panel="+str(user.loc+2)
+                    rig.select(panel).setRGBRaw(0,1,0)
+                    
+        rig.updateOnce() 
 
 '''
 User
@@ -49,7 +88,7 @@ class User:
             self.loc = self.loc + (1-self.direct*2)
         elif self.status==RUN:
             self.loc = self.loc + 2*(1-self.direct*2)
-    
+
 '''
 Users
 '''
@@ -83,17 +122,18 @@ class Users:
     def keepMovement(self):
         for name in self.users:
             self.users[name].keep()
+            if self.users[name].loc<1 or self.users[name].loc>50:
+                self.removeUser(name)
 
     #Operate Light
     def light(self,mode):
+        light.light(self.users)
         if mode==1:
             lights = ["*"]*51
             for user in self.users:
                 lights[self.users[user].loc] = "+"
             print "".join(lights)
-
-    
-
+   
 '''
 TCP Request Handler
 Handle TCP request and update the light
@@ -115,7 +155,7 @@ class myHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.end_headers() 
         elif self.path=="/small":
-            users.light(0)
+            #users.light(0)
             self.send_response(200)
         elif self.path=="/large":
             users.keepMovement()
@@ -161,6 +201,7 @@ def LargeTimerThread():
         requests.post(URL+"large",data="d")
 
 users   = Users()
+light = Light()
 if __name__=="__main__":
     thread.start_new_thread(ServerThread,())
     time.sleep(5)
