@@ -1,0 +1,19 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <h1 align="center" style="color:white;">Hi,{{username}}</h1>
+    <h2 align="center" style="color:white;">The light will follow you from {{from}} to {{to}} </h2>
+    <h2 align="center" style="color:white;">Control the velocity by your phone </h2>
+    <form align="center" action="/demoshow/onbridge/{{from}}/{{username}}" method="get">
+      <button name="walk" type="submit" value=1>Walk Across the bridge</button>
+      <button name="run"  type="submit" value=1>Run  Across the bridge</button>
+    </form>
+    <form align="center" action="/demoshow/onbridge/{{from}}/{{username}}" method="get">
+      <button name="back" type="submit" value=1> Go Back</button>
+      <button name="stop" type="submit" value=1> Stop </button>
+      <button name="leave" type="submit" value=1> Leave</button>
+    </form> 
+  </body>
+</html>
