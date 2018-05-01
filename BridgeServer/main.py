@@ -26,6 +26,8 @@ PURNELL = 1
 NEXT_USER_ID = 0
 BG_COLOR = (1,0,0)
 DEVICES_PER_PANEL = 4
+WALK_RATE = 1
+RUN_RATE = 2
 
 #Intialize the light
 rig = L.Rig("/home/teacher/Lumiverse/PBridge.rig.json")
@@ -85,12 +87,11 @@ class User:
         self.status = status
 
     #Keep: Triggered each second to move
-    #EDIT
-    def keep(self):
-        if self.status==WALK:
-            self.loc = self.loc + (1-self.direct*2)
-        elif self.status==RUN:
-            self.loc = self.loc + 2*(1-self.direct*2)
+    def move(self):
+        if self.status == WALK:
+            self.loc + self.direct * WALK_RATE
+        elif self.status == RUN:
+            self.loc + self.direct * RUN_RATE
 
 '''
 Users
@@ -101,15 +102,15 @@ class Users:
         self.users = {}
 
     #AddUser: add new user into the tracklist
-    def addUser(self,direct):
-        self.users[NEXT_USER_ID] = User(direct)
+    def addUser(self,direct,name):
+        self.users[name] = User(direct)
          
     #RemoveUser: remove user from tracklist
     def removeUser(self,name):
         del self.users[name]
 
     #Update User:
-    def updateMovement(self,status,name):
+    def updateStatus(self,status,name):
         if status==LEAVE:
             self.removeUser(name)
         elif status==WALK or status==RUN or status==STOP:
@@ -121,9 +122,9 @@ class Users:
             self.users[name].keep()
             
     #Keep former movement
-    def keepMovement(self):
-        for name in self.users:
-            self.users[name].keep()
+    def move(self):
+        for name in self.users.keys():
+            self.users[name].move()
             if self.users[name].loc<1 or self.users[name].loc>199:
                 self.removeUser(name)
 
@@ -158,22 +159,23 @@ class myHandler(BaseHTTPRequestHandler):
         if self.path=="/reg":
             self.data_string = self.rfile.read(int(self.headers['Content-Length']))
             data = json.loads(self.data_string)
-            users.addUser(data["direct"])
+            users.addUser(data["direct"], data["name"])
             self.send_response(200)
             self.end_headers()
             return
         elif self.path=="/exec":
             self.data_string = self.rfile.read(int(self.headers['Content-Length']))
             data = json.loads(self.data_string)
-            users.updateMovement(data["status"])
+            users.updateStatus(data["status"], data["name"])
             self.send_response(200)
             self.end_headers() 
         elif self.path=="/small":
             #users.light(0)
             self.send_response(200)
         elif self.path=="/large":
-            users.keepMovement()
-            Light.light()
+            users.move()
+            render(users, Lights)
+            Lights.light()
             self.send_response(200)
 
     def log_message(self, format, *args):
@@ -215,7 +217,7 @@ def LargeTimerThread():
         requests.post(URL+"large",data="d")
 
 users   = Users()
-Light = Light()
+Lights = Light()
 if __name__=="__main__":
     thread.start_new_thread(ServerThread,())
     time.sleep(5)
